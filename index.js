@@ -5,6 +5,7 @@ const sourceChannel = process.env.SOURCE_CHANNEL || "__bot_rss_receive";
 const targetChannel = process.env.TARGET_CHANNEL || "bottest";
 
 (async () => {
+    const filterHeadlineByKeyword = JSON.parse(process.env.FILTER_HEADLINE_BY_KEYWORD || "false")
 
     const list = await web.conversations.list();
     const conversation = list.channels.find(e=>e.name === sourceChannel);
@@ -27,7 +28,7 @@ const targetChannel = process.env.TARGET_CHANNEL || "bottest";
             source: e.blocks[0].elements[0].elements[3]
         }
     })
-    //.filter(e=>e.headline.indexOf(e.keyword)!==-1)
+    .filter(e=> filterHeadlineByKeyword || e.headline.indexOf(e.keyword) !== -1)
     .reduce((pv, cv) => {
         if (pv.has(cv.keyword)) pv.get(cv.keyword).push(cv)
         else pv.set(cv.keyword, [cv])
