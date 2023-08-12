@@ -1,11 +1,13 @@
 {
   "name": "vanpl-newsbot",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
     "start": "node --watch index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pack:layer": "npm install && mkdir nodejs && cp node_modules nodejs/ -r && zip -r layer.zip nodejs && rm nodejs -rf && aws --profile vanpl lambda publish-layer-version --layer-name newsbot-npm --zip-file fileb://layer.zip && rm layer.zip"
   },
   "author": "",
   "license": "ISC",

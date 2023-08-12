@@ -1,10 +1,12 @@
-require('dotenv').config();
-const { WebClient } = require('@slack/web-api');
+import { config } from 'dotenv'
+config();
+
+import { WebClient } from '@slack/web-api';
 const web = new WebClient(process.env.BOT_TOKEN);
 const sourceChannel = process.env.SOURCE_CHANNEL || "__bot_rss_receive";
 const targetChannel = process.env.TARGET_CHANNEL || "bottest";
 
-(async () => {
+const main = async () => {
     const filterHeadlineByKeyword = JSON.parse(process.env.FILTER_HEADLINE_BY_KEYWORD || "true")
 
     const list = await web.conversations.list();
@@ -21,14 +23,18 @@ const targetChannel = process.env.TARGET_CHANNEL || "bottest";
     const news = historyRet.messages.filter(e=>e.subtype === "bot_message");
 
     const keywordGrouped = news.map(e=>{
-        return {
-            keyword: e.username.split(" - ")[0].replaceAll("\"", "").replaceAll("\'", ""),
-            headline: e.blocks[0].elements[0].elements[2].text,
-            link: e.blocks[0].elements[0].elements[2].url,
-            source: e.blocks[0].elements[0].elements[3]
+        try {
+            return {
+                keyword: e.username.split(" - ")[0].replaceAll("\"", "").replaceAll("\'", ""),
+                headline: e.blocks[0].elements[0].elements[2].text,
+                link: e.blocks[0].elements[0].elements[2].url,
+                source: e.blocks[0].elements[0].elements[3]
+            }
+        } catch (e) {
+            return null
         }
     })
-    .filter(e=> filterHeadlineByKeyword === false || e.headline.indexOf(e.keyword) !== -1)
+    .filter(e=> e !== null && (filterHeadlineByKeyword === false || e.headline.indexOf(e.keyword) !== -1))
     .reduce((pv, cv) => {
         if (pv.has(cv.keyword)) pv.get(cv.keyword).push(cv)
         else pv.set(cv.keyword, [cv])
@@ -66,4 +72,38 @@ const targetChannel = process.env.TARGET_CHANNEL || "bottest";
         unfurl_links: false,
         unfurl_media: false,
     })
-})();
+};
+
+export const handler = async (event) => {
+    
+    try { 
+        const slackPayload = JSON.parse(event.body)
+        if (slackPayload.challenge)
+        {
+            console.log({"challenge": slackPayload.challenge})
+            return {
+              statusCode: 200,
+              body: JSON.stringify({"challenge": slackPayload.challenge}),
+            };;   
+        }
+    } catch(e) {} // slack verify
+    
+    let response = {};
+    try {
+        await main();
+    } catch (e) {
+        console.log(e)
+        response = {
+          statusCode: 500,
+          body: JSON.stringify(e),
+        };
+    } finally {
+        console.log("finally!")
+    }
+    
+
+     
+    return response;
+};
+
+// main();
